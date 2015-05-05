@@ -11,7 +11,7 @@ int push( Stack s, rb_root* r)
 	if(s->size == s->capacity)
 		return -1;
 	
-	s->table[s->size] = r;
+	s->var_table[s->size] = r;
 	s->size ++;
 	return 1;
 }
@@ -19,7 +19,7 @@ int push( Stack s, rb_root* r)
 rb_root* pop(Stack s)
 {
 	s->size --;
-	return s->table[s->size];
+	return s->var_table[s->size];
 }
 
 //规定栈顶元素index==0, 栈底元素index==size-1
@@ -28,6 +28,6 @@ rb_root* get_elemt_at(Stack s, int i)
 	if (i<0 || i>s->size-1)
 		return NULL;
 	
-	return s->table[s->size-1-i];
+	return s->var_table[s->size-1-i];
 }
 

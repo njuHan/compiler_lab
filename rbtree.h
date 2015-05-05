@@ -98,6 +98,7 @@ static inline struct page * rb_insert_page_cache(struct inode * inode,
 #include <stdio.h>
 #include <stdlib.h>
 
+
 /* linux-2.6.38.8/include/linux/stddef.h */
 #undef NULL
 #if defined(__cplusplus)
@@ -180,9 +181,13 @@ struct mytype {
     struct rb_node node;
     int num;
 };
+
+
+
+
 //---------------自定义函数------------
 
-
+/*
 //查找
 struct mytype *rb_search(struct rb_root *root, int num);
 
@@ -195,8 +200,7 @@ void rb_delete(struct rb_root *root, int num);
 
 //输出
 void print_rbtree(struct rb_root *tree);
-
-
+*/
 
 
 

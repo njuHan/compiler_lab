@@ -23,6 +23,7 @@
 //#include <linux/rbtree.h>
 //#include <linux/module.h>
 #include "rbtree.h"
+#include "semantic.h"
 
 static void __rb_rotate_left(struct rb_node *node, struct rb_root *root)
 {
@@ -389,9 +390,13 @@ void rb_replace_node(struct rb_node *victim, struct rb_node *new,
 	/* Copy the pointers/colour from the victim to the replacement */
 	*new = *victim;
 }
+
+
 //------------自定义函数-------
 
 
+
+/*
 //查找
 struct mytype *rb_search(struct rb_root *root, int num)
 {
@@ -416,7 +421,7 @@ int rb_insert(struct rb_root *root, struct mytype *data)
 {
     struct rb_node **tmp = &(root->rb_node), *parent = NULL;
 
-    /* Figure out where to put new node */
+    // Figure out where to put new node 
     while (*tmp) {
 	struct mytype *this = container_of(*tmp, struct mytype, node);
 	//printf("insert %d, this: %d,,%d,%d\n", data->num,this->num,(int)data,(int)this);
@@ -429,7 +434,7 @@ int rb_insert(struct rb_root *root, struct mytype *data)
 	    return -1;
     }
     
-    /* Add new node and rebalance tree. */
+    // Add new node and rebalance tree.
     rb_link_node(&data->node, parent, tmp);
     rb_insert_color(&data->node, root);
     
@@ -457,5 +462,5 @@ void print_rbtree(struct rb_root *tree)
 		printf("%d ", rb_entry(node, struct mytype, node)->num);
     printf("\n");
 }
-
+*/
 
