@@ -22,5 +22,8 @@ int main(int argc, char** argv)
 	printf("-----------\n");
 
 	semantic_scan(root,0);
+	print_rbtree(struct_table);
+	printf("-----------\n");
+	print_rbtree(var_table);
 	return 0;
 }

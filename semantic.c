@@ -62,9 +62,22 @@ void rb_delete(struct rb_root *root, char* name)
 void print_rbtree(struct rb_root *tree)
 {
     struct rb_node *node;
+	Entry e;
     for (node = rb_first(tree); node; node = rb_next(node))
-		printf("%s ", rb_entry(node, struct Entry_, node)->value->name);
-    printf("\n");
+	{
+		e = rb_entry(node, struct Entry_, node);
+		printf("name: %s, ", e->value->name);
+		printf("type.kind: %d, ", e->value->type->kind);
+		while (e->value->type->kind == 1)
+		{
+			printf("\n");
+			printf("elem type: %d, size: %d",e->value->type->u.array.elem->kind, e->value->type->u.array.size);     
+			e->value->type = e->value->type->u.array.elem;
+			
+		}
+		printf("\n");
+	}
+   
 }
 
 
@@ -76,10 +89,12 @@ void table_init()
 	func_table = (rb_root*)malloc(sizeof(rb_root));
 	*func_table = RB_ROOT;
 	
+	var_table = (rb_root*)malloc(sizeof(rb_root));
+	*var_table = RB_ROOT;	
 }
 
 
-Type specifer_handler(Node* node)
+Type specifier_handler(Node* node)
 {
 	Node* child = node->child;
 	if (child == NULL)
@@ -99,7 +114,7 @@ Type specifer_handler(Node* node)
 	else if (strcmp(child->value.name, "StructSpecifier") == 0)
 	{
 		
-		return struct_spcifier_handler(child);
+		return struct_specifier_handler(child);
 	}
 	else
 	{
@@ -109,7 +124,7 @@ Type specifer_handler(Node* node)
 	
 }
 
-Type struct_spcifier_handler(Node* node)
+Type struct_specifier_handler(Node* node)
 {		
 	Node* child = node->child;
 	//printf("%s\n", child->sibling->value.name );
@@ -130,6 +145,7 @@ Type struct_spcifier_handler(Node* node)
 			e->value->type = (Type_*)malloc(sizeof(Type_));
 			strcpy(e->value->name, child->sibling->child->value.type_str);
 			e->value->type->kind = STRUCTURE;
+			e->value->tail = NULL;
 			int ret = rb_insert(struct_table, e);
 			if (ret < 0) 
 			{
@@ -167,6 +183,7 @@ Type struct_spcifier_handler(Node* node)
 			e->value->type = (Type_*)malloc(sizeof(Type_));
 			strcpy(e->value->name, child->sibling->child->value.type_str);
 			e->value->type->kind = STRUCTURE;
+			e->value->tail = NULL;
 			int ret = rb_insert(struct_table, e);
 			if (ret < 0) 
 			{
@@ -187,6 +204,117 @@ Type struct_spcifier_handler(Node* node)
 	}
 }
 
+FieldList vardec_handler(Node* node, Type type)
+{
+	Node* child = node->child;
+	FieldList var;
+	
+	//VarDec -> ID
+	if(strcmp(child->value.name, "ID")==0)
+	{
+		var = (FieldList)malloc(sizeof(FieldList_));
+		int len = strlen(child->value.type_str);
+		var->name = (char*)malloc(sizeof(len+1));
+		strcpy(var->name, child->value.type_str);
+		var->type = type;
+		var->tail = NULL;
+		return var;
+	}
+	//VarDec -> VarDec LB INT RB
+	else if (strcmp(child->value.name, "VarDec") == 0)
+	{
+		var = vardec_handler(child, type);
+		Type new_type = (Type)malloc(sizeof(Type_));
+		new_type -> kind = ARRAY;
+		new_type->u.array.size = child-> sibling->sibling->value.type_int;
+		if(type->kind == BASIC || type->kind == STRUCTURE)
+		{
+			new_type->u.array.elem = var->type;
+			var->type = new_type;
+		}
+		else if (type->kind == ARRAY)
+		{
+			while ((var->type->u.array.elem)->kind == ARRAY)
+				var->type = var->type->u.array.elem;
+			new_type->u.array.elem = var->type;
+			var->type = new_type;
+		}
+		return var;
+		
+	}
+	else
+	{
+		printf("ERROR, vardec_handler\n");
+		exit(1);
+	}
+}
+
+int extdeclist_handler(Node* node, Type type)
+{
+	FieldList var;
+	Node* child = node->child;
+	if (strcmp(child->value.name , "VarDec") == 0)
+	{
+		var = vardec_handler(child, type);
+		
+		Entry e = malloc(sizeof(struct Entry_));
+		e->value = var;
+		
+		int ret = rb_insert(var_table, e);
+		if (ret < 0) 
+		{
+			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->value->name);
+		}
+		if (child->sibling == NULL)
+			return 0;
+		else if (strcmp(child->sibling->value.name, "COMMA")==0)
+		{
+			//printf("COMMA\n");
+			return extdeclist_handler(child->sibling->sibling, type);
+		}
+	}
+	else
+	{
+		printf("error! extdeclist_handler\n");
+		exit(1);
+	}
+}
+
+int extdef_handler(Node* node)
+{
+	Node* child = node->child; //"Specifier"
+	Type type = specifier_handler(child); //get Type
+	
+	//获取兄弟节点
+	child = child->sibling;
+	
+	//ExtDef -> Specifier SEMI
+	if (strcmp(child->value.name, "SEMI") == 0)
+		return 0;
+	
+	else if (strcmp(child->value.name, "ExtDecList") == 0)
+	{
+		return extdeclist_handler(child, type);
+	}
+	else if (strcmp(child->value.name, "FunDec")==0)
+	{
+		
+	}
+	else
+	{
+		printf("error， extdef_handler\n");
+		exit(1);
+	}
+}
+
+FieldList fundec_handler(Node* node)
+{
+}
+int varlist_handler(Node* node, FieldList* list, int index)
+{
+}
+
+
 void semantic(Node* node, int level)
 {
 	/*
@@ -203,17 +331,23 @@ void semantic(Node* node, int level)
 		return;
 	}
 	*/
-	
+	/*
 	if (strcmp(node->value.name, "Specifier")==0)
 	{
 		printf("find a specifier\n");
-		Type  temp = specifer_handler(node);
+		Type  temp = specifier_handler(node);
 		if (temp != NULL)
 		{
 			printf("%d\n", temp->kind);
 		}
 	}
+	*/
 	
+	if (strcmp(node->value.name, "ExtDef")==0)
+	{
+		//printf("find a extdef\n");
+		extdef_handler(node);
+	}
 }
 
 void semantic_scan(Node* node , int level)

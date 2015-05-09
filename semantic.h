@@ -44,7 +44,8 @@ typedef struct Entry_
 typedef struct Entry_* Entry;
 
 //变量表
-Stack var_table;
+//Stack var_table;
+rb_root* var_table;
 	
 //struct 类型表
 //Stack struct_table;
@@ -73,10 +74,18 @@ void print_rbtree(struct rb_root *tree);
 
 
 
-Type exp_handler(Node* node);
 
-Type struct_spcifier_handler(Node* node);
-Type specifer_handler(Node* node);
+
+Type struct_specifier_handler(Node* node);
+Type specifier_handler(Node* node);
+
+FieldList vardec_handler(Node* node, Type type);
+int extdef_handler(Node* node);
+int extdeclist_handler(Node* node, Type type);
+
+FieldList fundec_handler(Node* node);
+int varlist_handler(Node* node, FieldList* list, int index);
+
 
 void semantic(Node* node, int level);
 
