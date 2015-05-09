@@ -3,11 +3,12 @@
 
 #include "rbtree.h"
 #include "stack.h"
+#include "tree.h"
 typedef struct Type_* Type;
 typedef struct FieldList_* FieldList;
 
 
-struct Type_
+typedef struct Type_
 {
 	enum { BASIC, ARRAY, STRUCTURE } kind;
 	union
@@ -22,25 +23,14 @@ struct Type_
 		//struct type ,it's a list
 		FieldList structure;
 	} u;
-};
+}Type_;
 
-struct FieldList_
+typedef struct FieldList_
 {
 	char* name; //域的名字
 	Type type;  //域的类型
 	FieldList tail; //下一个域
-};
-
-//变量表
-Stack var_table;
-	
-//struct 类型表
-rb_root* StructTable;
-
-//函数类型表
-rb_root* FuncTable;
-
-
+}FieldList_;
 
 //符号表的元素
 typedef struct Entry_
@@ -52,6 +42,21 @@ typedef struct Entry_
 }Entry_;
 
 typedef struct Entry_* Entry;
+
+//变量表
+Stack var_table;
+	
+//struct 类型表
+//Stack struct_table;
+rb_root* struct_table;
+
+//函数类型表
+rb_root* func_table;
+
+
+void table_init();
+
+
 
 //查找
 Entry rb_search(struct rb_root *root, char* name);
@@ -65,5 +70,19 @@ void rb_delete(struct rb_root *root, char* name);
 
 //输出
 void print_rbtree(struct rb_root *tree);
+
+
+
+Type exp_handler(Node* node);
+
+Type struct_spcifier_handler(Node* node);
+Type specifer_handler(Node* node);
+
+void semantic(Node* node, int level);
+
+void semantic_scan(Node* node, int level);
+
+
+
 
 #endif
