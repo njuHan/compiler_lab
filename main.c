@@ -25,5 +25,7 @@ int main(int argc, char** argv)
 	print_rbtree(struct_table);
 	printf("-----------\n");
 	print_rbtree(var_table);
+	printf("-----------\n");
+	print_rbtree(func_table);
 	return 0;
 }

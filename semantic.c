@@ -1,5 +1,6 @@
 #include "semantic.h"
 #include <string.h>
+#include <assert.h>
 //查找
 Entry rb_search(struct rb_root *root, char* name)
 {
@@ -15,7 +16,7 @@ Entry rb_search(struct rb_root *root, char* name)
 	else
 	    return e;
     }
-    
+
     return NULL;
 }
 
@@ -75,6 +76,20 @@ void print_rbtree(struct rb_root *tree)
 			e->value->type = e->value->type->u.array.elem;
 			
 		}
+		//function
+		if (e->value->type->kind == 3)
+		{
+			printf("return type: %d; param num: %d; ", e->value->type->u.func.return_type->kind, e->value->type->u.func.num);
+			printf("param list: ");
+			FieldList p = e->value->type->u.func.param;
+			if (p==NULL)
+				printf("No param");
+			while (p!=NULL)
+			{
+				printf("type: %d, name: %s, ",p->type->kind, p->name);
+				p = p->tail;
+			}
+		}
 		printf("\n");
 	}
    
@@ -99,7 +114,7 @@ Type specifier_handler(Node* node)
 	Node* child = node->child;
 	if (child == NULL)
 	{
-		printf("error specifer_handler\n");
+		printf("error specifier_handler\n");
 		exit(1);
 	}
 	Type type;
@@ -299,6 +314,25 @@ int extdef_handler(Node* node)
 	else if (strcmp(child->value.name, "FunDec")==0)
 	{
 		
+		
+		Node* id = child->child;
+		assert(strcmp(id->value.name, "ID")==0);
+		int len = strlen(id->value.type_str);
+		char* func_name  = (char*)malloc(len+1);
+		strcpy(func_name, id->value.type_str);
+		//printf("%s\n", func_name);
+		
+		FieldList func = fundec_handler(child);
+		//函数返回值
+		func->type->u.func.return_type = type;
+		Entry e = malloc(sizeof(struct Entry_));
+		e->value = func;
+		int ret = rb_insert(func_table, e);
+		if (ret < 0) 
+		{
+			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->value->name);
+		}
+		
 	}
 	else
 	{
@@ -307,12 +341,117 @@ int extdef_handler(Node* node)
 	}
 }
 
-FieldList fundec_handler(Node* node)
+FieldList paramdec_handler(Node* node)
 {
+	Type type;
+	Node* child = node->child;
+	if (strcmp(child->value.name, "Specifier") == 0)
+	{
+		type = specifier_handler(child);
+		return vardec_handler(child->sibling, type);
+	}
+	else
+	{
+		printf("error! paramdec_handler\n");
+		exit(0);
+	}
 }
+
 int varlist_handler(Node* node, FieldList* list, int index)
 {
+	Node* child = node->child;
+	if (strcmp(child->value.name, "ParamDec")!=0)
+	{
+		printf("error! paramdec\n");
+		exit(1);
+	}
+	FieldList var;
+	var = paramdec_handler(child);
+	
+	//连接到参数列表尾部
+	FieldList p = *list;
+	FieldList q = *list;
+
+	
+	if (*list == NULL)
+	{
+		*list = var;
+		(*list)->tail = NULL;
+	}
+	else
+	{
+		FieldList p = *list;
+		FieldList q = (*list)->tail;
+		while (q!=NULL)
+		{
+			p=q;
+			q = q->tail;
+		}
+		q = var;
+		p->tail = q;
+			
+	}
+	
+	index ++;
+	
+	if (child->sibling == NULL)
+	{
+		assert(list!=NULL);
+		return index;
+		
+	}
+	else if (strcmp(child->sibling->value.name, "COMMA") == 0)
+	{
+		return varlist_handler(child->sibling->sibling, list, index);
+	}
+	else
+	{
+		printf("error, varlist_handler\n");
+		exit(1);
+	}
+	
+		
 }
+
+FieldList fundec_handler(Node* node)
+{
+	FieldList func;
+	FieldList param_list= NULL;
+	Node* child = node->child;
+	func = (FieldList)malloc(sizeof(FieldList_));
+	func->type = (Type)malloc(sizeof(Type_));
+	func->type->kind = FUNCTION;
+	func->tail = NULL;
+	int len = strlen(child->value.type_str);
+	func->name = (char*)malloc(len+1);
+	strcpy(func->name, child->value.type_str);
+	
+	int num = 0;
+	int i = 0;
+	//FuncDec -> ID LP VarList RP
+	if (strcmp(child->sibling->sibling->value.name, "VarList") == 0)
+	{
+		num = varlist_handler(child->sibling->sibling, &param_list, i);
+		func->type->u.func.num = num;
+		func->type->u.func.param = param_list;
+		
+
+	}
+	//FuncDec-> ID LP RP
+	else if (strcmp(child->sibling->sibling->value.name, "RP")==0)
+	{
+		func->type->u.func.param = NULL;
+	}
+	else
+	{
+		printf("error, funcdec_handler\n%s\n",child->sibling->sibling->value.name);
+		exit(1);
+	}
+	return func;
+	
+}
+
+
 
 
 void semantic(Node* node, int level)

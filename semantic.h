@@ -10,7 +10,7 @@ typedef struct FieldList_* FieldList;
 
 typedef struct Type_
 {
-	enum { BASIC, ARRAY, STRUCTURE } kind;
+	enum { BASIC, ARRAY, STRUCTURE ,FUNCTION} kind;
 	union
 	{
 		//basic type
@@ -22,6 +22,14 @@ typedef struct Type_
 		
 		//struct type ,it's a list
 		FieldList structure;
+		
+		//函数类型
+		struct
+		{
+			FieldList param;
+			Type return_type;
+			int num;
+		} func;
 	} u;
 }Type_;
 
@@ -85,10 +93,11 @@ int extdeclist_handler(Node* node, Type type);
 
 FieldList fundec_handler(Node* node);
 int varlist_handler(Node* node, FieldList* list, int index);
+FieldList paramdec_handler(Node* node);
+
 
 
 void semantic(Node* node, int level);
-
 void semantic_scan(Node* node, int level);
 
 
