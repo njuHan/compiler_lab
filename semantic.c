@@ -591,29 +591,54 @@ void declist_handler(Node* node, Type type, FieldList* list, int flag)
 	FieldList var;
 	var = dec_handler(child, type, flag);
 	
-	//连接到参数列表尾部
-	FieldList p = *list;
-	FieldList q = *list;
-	if (*list == NULL)
+	//检查是否重定义
+	FieldList head = *list;
+	int flag_redefine = 0;
+	while(head!=NULL)
 	{
-		*list = var;
-		(*list)->tail = NULL;
-		
-	}
-	else
-	{
-		FieldList p = *list;
-		FieldList q = (*list)->tail;
-		while (q!=NULL)
+		if (strcmp(head->name, var->name)==0)
 		{
-			p=q;
-			q = q->tail;
+			flag_redefine = 1;
+			//Error type 15 at Line 4: Redefined field "x".
+			if (flag == 1) //in structure
+			{
+				printf("Error type 15 at Line %d: Redefined field '%s'.\n", child->value.lineno, var->name);
+			}
+			else //not in structure
+			{
+				//Error type 3 at Line 4: Redefined variable "i".
+				printf("Error type 3 at Line %d: Redefined variable '%s'.\n",child->value.lineno, var->name);
+			}
 		}
-		q = var;
-		p->tail = q;
-		
 			
+		head = head->tail;
 	}
+	
+	if (flag_redefine==0) //没有重定义则存在链表中
+	{
+		//连接到参数列表尾部
+		FieldList p = *list;
+		FieldList q = *list;
+		if (*list == NULL)
+		{
+			*list = var;
+			(*list)->tail = NULL;
+		
+		}
+		else
+		{
+			FieldList p = *list;
+			FieldList q = (*list)->tail;
+			while (q!=NULL)
+			{
+				p=q;
+				q = q->tail;
+			}
+			q = var;
+			p->tail = q;	
+		}
+	}
+	
 	if (child->sibling!=NULL && strcmp(child->sibling->value.name, "COMMA")==0)
 	{
 		
