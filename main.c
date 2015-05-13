@@ -19,13 +19,24 @@ int main(int argc, char** argv)
 	yyparse();
 	
 	output_tree(root,0);
-	printf("-----------\n");
-
+	printf("\n------struct-----\n");
+	
 	semantic_scan(root,0);
-	print_rbtree(struct_table);
-	printf("-----------\n");
-	print_rbtree(var_table);
-	printf("-----------\n");
+	print_rbtree(global_struct_table);
+	
+	printf("\n-----global var------\n");
+	print_rbtree(global_var_table);
+	
+	int n = var_table->size;
+	int i=0;
+	for (i=0; i<n-1; i++)
+	{
+		printf("\n-----compst %d var------\n", i);
+		print_rbtree(pop(var_table));
+	}
+
+	
+	printf("\n-----function------\n");
 	print_rbtree(func_table);
 	return 0;
 }

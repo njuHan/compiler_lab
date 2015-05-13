@@ -1,6 +1,24 @@
 #include "semantic.h"
 #include <string.h>
 #include <assert.h>
+
+Entry stack_search(Stack s, char* name)
+{
+	int n = s->size;
+	int i;
+	struct rb_root* root;
+	Entry e;
+	for (i=0; i<n; i++)
+	{
+		root = get_elemt_at(s, i);
+		e = rb_search(root, name);
+		if (e!=NULL)
+			break;
+	}
+	return e;
+}
+
+
 //查找
 Entry rb_search(struct rb_root *root, char* name)
 {
@@ -26,17 +44,18 @@ int rb_insert(struct rb_root *root, Entry e)
     struct rb_node **tmp = &(root->rb_node), *parent = NULL;
 
     // Figure out where to put new node 
-    while (*tmp) {
-	Entry this = container_of(*tmp, struct Entry_, node);
-	//printf("insert %d, this: %d,,%d,%d\n", data->num,this->num,(int)data,(int)this);
-	parent = *tmp;
+    while (*tmp) 
+	{
+		Entry this = container_of(*tmp, struct Entry_, node);
+		//printf("insert %d, this: %d,,%d,%d\n", data->num,this->num,(int)data,(int)this);
+		parent = *tmp;
 	
-	if (strcmp(e->field->name, this->field->name)<0)
-	    tmp = &((*tmp)->rb_left);
-	else if (strcmp(e->field->name, this->field->name)>0)
-	    tmp = &((*tmp)->rb_right);
-	else 
-	    return -1;
+		if (strcmp(e->field->name, this->field->name)<0)
+			tmp = &((*tmp)->rb_left);
+		else if (strcmp(e->field->name, this->field->name)>0)
+			tmp = &((*tmp)->rb_right);
+		else 
+			return -1;
     }
     
     // Add new node and rebalance tree.
@@ -111,14 +130,22 @@ void table_init()
 {
 	anonymous_id = 0;
 	
-	struct_table = (rb_root*)malloc(sizeof(rb_root));
-	*struct_table = RB_ROOT;
-	
 	func_table = (rb_root*)malloc(sizeof(rb_root));
 	*func_table = RB_ROOT;
 	
-	var_table = (rb_root*)malloc(sizeof(rb_root));
-	*var_table = RB_ROOT;	
+	global_struct_table = (rb_root*)malloc(sizeof(rb_root));
+	*global_struct_table = RB_ROOT;
+	
+	global_var_table = (rb_root*)malloc(sizeof(rb_root));
+	*global_var_table = RB_ROOT;	
+	
+	var_table = malloc(sizeof(Stack_));
+	stack_init(var_table);
+	push(var_table, global_var_table);
+	
+	struct_table = malloc(sizeof(Stack_));
+	stack_init(struct_table);
+	push(struct_table, global_struct_table);
 }
 
 
@@ -170,7 +197,7 @@ Type struct_specifier_handler(Node* node)
 		int len = strlen(child->sibling->child->value.type_str);
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, child->sibling->child->value.type_str);
-		Entry e = rb_search(struct_table, struct_name);
+		Entry e = rb_search(global_struct_table, struct_name);
 		if (e==NULL)
 		{
 			Entry e = malloc(sizeof(struct Entry_));
@@ -190,7 +217,7 @@ Type struct_specifier_handler(Node* node)
 			p=p->tail;
 		}
 		*/
-			int ret = rb_insert(struct_table, e);
+			int ret = rb_insert(global_struct_table, e);
 			if (ret < 0) 
 			{
 				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
@@ -223,7 +250,7 @@ Type struct_specifier_handler(Node* node)
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, temp);
 		printf("struct name: %s\n", struct_name);
-		Entry e = rb_search(struct_table, struct_name);
+		Entry e = rb_search(global_struct_table, struct_name);
 		if (e==NULL)
 		{
 			Entry e = malloc(sizeof(struct Entry_));
@@ -233,7 +260,7 @@ Type struct_specifier_handler(Node* node)
 			strcpy(e->field->name, struct_name);
 			e->field->type->kind = STRUCTURE;
 			e->field->tail = NULL;
-			int ret = rb_insert(struct_table, e);
+			int ret = rb_insert(global_struct_table, e);
 			if (ret < 0) 
 			{
 				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
@@ -258,7 +285,7 @@ Type struct_specifier_handler(Node* node)
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, child->sibling->child->value.type_str);
 		
-		Entry e = rb_search(struct_table, struct_name);
+		Entry e = rb_search(global_struct_table, struct_name);
 		
 		if (e==NULL)
 		{
@@ -272,7 +299,7 @@ Type struct_specifier_handler(Node* node)
 			e->field->tail = NULL;
 			e->field->type->u.structure =NULL;
 			
-			int ret = rb_insert(struct_table, e);
+			int ret = rb_insert(global_struct_table, e);
 			if (ret < 0) 
 			{
 				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
@@ -347,11 +374,12 @@ int extdeclist_handler(Node* node, Type type)
 	if (strcmp(child->value.name , "VarDec") == 0)
 	{
 		var = vardec_handler(child, type);
-		
+		var->tail = NULL;
 		Entry e = malloc(sizeof(struct Entry_));
 		e->field = var;
 		
-		int ret = rb_insert(var_table, e);
+		//int ret = rb_insert(global_var_table, e);
+		int ret = rb_insert(get_elemt_at(var_table,0), e);
 		if (ret < 0) 
 		{
 			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
@@ -542,6 +570,41 @@ FieldList paramdec_handler(Node* node)
 		printf("error! paramdec_handler\n");
 		exit(0);
 	}
+}
+
+void compst_handler(Node* node)
+{
+	//局部作用域变量表初始化
+	rb_root* temp_table;
+	temp_table = (rb_root*)malloc(sizeof(rb_root));
+	*temp_table = RB_ROOT;
+	
+	push(var_table, temp_table);
+
+	Node* def_list = node->child->sibling;
+	assert(strcmp(def_list->value.name, "DefList")==0);
+	int in_struct = 0; //not in struct
+	FieldList list = deflist_handler(def_list, in_struct);
+	while (list!=NULL)
+	{
+		
+		FieldList var = list;
+		list = list->tail;
+		var->tail = NULL;
+		Entry e = malloc(sizeof(struct Entry_));
+		e->field = var;
+		
+		int ret = rb_insert(temp_table, e);
+		if (ret < 0) 
+		{
+			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
+		}
+		
+		
+	}
+	pop(var_table);
+	
+	
 }
 
 FieldList deflist_handler(Node* node,  int flag)
@@ -904,8 +967,8 @@ Type exp_handler(Node* node)
 		Entry e = rb_search(func_table, child->value.type_str);
 		if (e == NULL)
 		{
-			e = rb_search(var_table, child->value.type_str);
-			e = rb_search(struct_table, child->value.type_str);	
+			e = rb_search(global_var_table, child->value.type_str);
+			e = rb_search(global_struct_table, child->value.type_str);	
 			if (e ==NULL)
 				printf("Error type 2 at line %d: Undefined function '%s'\n",child->value.lineno,child->value.type_str);
 			else
@@ -1003,10 +1066,23 @@ void semantic(Node* node, int level)
 		//printf("find a extdef\n");
 		extdef_handler(node);
 	}
+	if (strcmp(node->value.name, "CompSt")==0)
+	{
+		compst_handler(node);
+	}
+	if (strcmp(node->value.name, "Exp")==0)
+	{
+		exp_handler(node);
+	}
 }
 
 void semantic_scan(Node* node , int level)
 {
+	if (errcount>0)
+	{	
+		printf("Program has syntax error! semantic scan stopped!\n");
+		return;
+	}
 	
 	semantic(node,level);
 	if (node->child!=NULL)

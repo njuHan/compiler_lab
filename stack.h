@@ -14,7 +14,7 @@ struct rb_root * element
 
 typedef struct Stack_
 {
-	rb_root* var_table[MAX_CAPACITY];
+	rb_root* table[MAX_CAPACITY];
 	int size;
 	int capacity;
 } Stack_ ;

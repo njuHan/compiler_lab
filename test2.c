@@ -1,9 +1,25 @@
+int x;
+int y;
+
 struct st1
 {
-	int a;
-	float b,c;
-	struct st1 a;
+	int st_a;
+	int st_b;
+	float st_b;
+	
 };
+int main()
+{
+	int a;
+	float b;
+	struct st1 s;
+	if (1)
+	{
+		int b;
+		int a;
+	}
+	
+}
 
 
 

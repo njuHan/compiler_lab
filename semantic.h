@@ -52,12 +52,13 @@ typedef struct Entry_
 typedef struct Entry_* Entry;
 
 //变量表
-//Stack var_table;
-rb_root* var_table;
+Stack var_table;
+rb_root* global_var_table;
+
 	
 //struct 类型表
-//Stack struct_table;
-rb_root* struct_table;
+Stack struct_table;
+rb_root* global_struct_table;
 
 //函数类型表
 rb_root* func_table;
@@ -67,7 +68,9 @@ void table_init();
 
 
 
+
 //查找
+Entry stack_search(Stack s, char* name);
 Entry rb_search(struct rb_root *root, char* name);
 
 
@@ -99,10 +102,16 @@ FieldList fundec_handler(Node* node);
 int varlist_handler(Node* node, FieldList* list, int index);
 FieldList paramdec_handler(Node* node);
 
+/*
+ * flag = 0 means that deflist is in the compst(in the function)
+ * flag = 1 means that deflist is in the structureSpecifier
+ */
+//statements
+void compst_handler(Node* node);
+
 //local definition
 FieldList deflist_handler(Node* node,   int flag);
 void def_handler(Node* node, FieldList *list, int flag);
-
 void declist_handler(Node* node, Type type, FieldList *list, int flag);
 FieldList dec_handler(Node* node, Type type,  int flag);
 
