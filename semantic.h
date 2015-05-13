@@ -46,7 +46,7 @@ typedef struct Entry_
 	//红黑树结点
 	struct rb_node node;
 	//value->name 作为红黑树中的keystring
-	FieldList value;
+	FieldList field;
 }Entry_;
 
 typedef struct Entry_* Entry;
@@ -81,20 +81,33 @@ void rb_delete(struct rb_root *root, char* name);
 void print_rbtree(struct rb_root *tree);
 
 
+//匿名结构体id
+int anonymous_id;
 
-
-
+//specifier
 Type struct_specifier_handler(Node* node);
 Type specifier_handler(Node* node);
 
-FieldList vardec_handler(Node* node, Type type);
+//high-level definition
+
 int extdef_handler(Node* node);
 int extdeclist_handler(Node* node, Type type);
 
+//declarators
+FieldList vardec_handler(Node* node, Type type);
 FieldList fundec_handler(Node* node);
 int varlist_handler(Node* node, FieldList* list, int index);
 FieldList paramdec_handler(Node* node);
 
+//local definition
+FieldList deflist_handler(Node* node,   int flag);
+void def_handler(Node* node, FieldList *list, int flag);
+
+void declist_handler(Node* node, Type type, FieldList *list, int flag);
+FieldList dec_handler(Node* node, Type type,  int flag);
+
+//expressions
+Type exp_handler(Node* node);
 
 
 void semantic(Node* node, int level);

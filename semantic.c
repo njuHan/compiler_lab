@@ -9,9 +9,9 @@ Entry rb_search(struct rb_root *root, char* name)
     while (node) {
 	Entry e = container_of(node, struct Entry_ , node);
 
-	if (strcmp(name, e->value->name)<0)
+	if (strcmp(name, e->field->name)<0)
 	    node = node->rb_left;
-	else if (strcmp(name, e->value->name)>0)
+	else if (strcmp(name, e->field->name)>0)
 	    node = node->rb_right;
 	else
 	    return e;
@@ -31,9 +31,9 @@ int rb_insert(struct rb_root *root, Entry e)
 	//printf("insert %d, this: %d,,%d,%d\n", data->num,this->num,(int)data,(int)this);
 	parent = *tmp;
 	
-	if (strcmp(e->value->name, this->value->name)<0)
+	if (strcmp(e->field->name, this->field->name)<0)
 	    tmp = &((*tmp)->rb_left);
-	else if (strcmp(e->value->name, this->value->name)>0)
+	else if (strcmp(e->field->name, this->field->name)>0)
 	    tmp = &((*tmp)->rb_right);
 	else 
 	    return -1;
@@ -67,27 +67,38 @@ void print_rbtree(struct rb_root *tree)
     for (node = rb_first(tree); node; node = rb_next(node))
 	{
 		e = rb_entry(node, struct Entry_, node);
-		printf("name: %s, ", e->value->name);
-		printf("type.kind: %d, ", e->value->type->kind);
-		while (e->value->type->kind == 1)
+		printf("name: %s, ", e->field->name);
+		printf("type.kind: %d, ", e->field->type->kind);
+		while (e->field->type->kind == 1)
 		{
 			printf("\n");
-			printf("elem type: %d, size: %d",e->value->type->u.array.elem->kind, e->value->type->u.array.size);     
-			e->value->type = e->value->type->u.array.elem;
+			printf("elem type: %d, size: %d",e->field->type->u.array.elem->kind, e->field->type->u.array.size);     
+			e->field->type = e->field->type->u.array.elem;
 			
 		}
 		//function
-		if (e->value->type->kind == 3)
+		if (e->field->type->kind == 3)
 		{
-			printf("return type: %d; param num: %d; ", e->value->type->u.func.return_type->kind, e->value->type->u.func.num);
+			printf("return type: %d; param num: %d; ", e->field->type->u.func.return_type->kind, e->field->type->u.func.num);
 			printf("param list: ");
-			FieldList p = e->value->type->u.func.param;
+			FieldList p = e->field->type->u.func.param;
 			if (p==NULL)
 				printf("No param");
 			while (p!=NULL)
 			{
 				printf("type: %d, name: %s, ",p->type->kind, p->name);
 				p = p->tail;
+			}
+		}
+		
+		else if (e->field->type->kind==STRUCTURE)
+		{
+			FieldList p = e->field->type->u.structure;
+			printf("struct member: \n");
+			while(p!=NULL)
+			{
+				printf("name: %s, type: %d\n",p->name, p->type->kind);
+				p=p->tail;
 			}
 		}
 		printf("\n");
@@ -98,6 +109,8 @@ void print_rbtree(struct rb_root *tree)
 
 void table_init()
 {
+	anonymous_id = 0;
+	
 	struct_table = (rb_root*)malloc(sizeof(rb_root));
 	*struct_table = RB_ROOT;
 	
@@ -144,8 +157,15 @@ Type struct_specifier_handler(Node* node)
 	Node* child = node->child;
 	//printf("%s\n", child->sibling->value.name );
 	//StructSpecifier -> STRUCT OpTag LC DefList RC
-	if (strcmp(child->sibling->value.name, "OptTag") == 0 || strcmp(child->sibling->value.name, "null") == 0)
+	
+		
+	if (strcmp(child->sibling->value.name, "OptTag") == 0 )
 	{
+		Node* def_list = child->sibling->sibling->sibling;
+		assert(strcmp(def_list->value.name, "DefList")==0);
+		int in_struct = 1;
+		
+		FieldList structure = deflist_handler(def_list, in_struct);
 		
 		int len = strlen(child->sibling->child->value.type_str);
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
@@ -153,27 +173,78 @@ Type struct_specifier_handler(Node* node)
 		Entry e = rb_search(struct_table, struct_name);
 		if (e==NULL)
 		{
-			
 			Entry e = malloc(sizeof(struct Entry_));
-			e->value = malloc(sizeof(struct FieldList_));
-			e->value->name = (char*)malloc(len+1);
-			e->value->type = (Type_*)malloc(sizeof(Type_));
-			strcpy(e->value->name, child->sibling->child->value.type_str);
-			e->value->type->kind = STRUCTURE;
-			e->value->tail = NULL;
+			e->field = malloc(sizeof(struct FieldList_));
+			e->field->name = (char*)malloc(len+1);
+			e->field->type = (Type_*)malloc(sizeof(Type_));
+			strcpy(e->field->name, struct_name);
+			e->field->type->kind = STRUCTURE;
+			e->field->tail = NULL;
+			e->field->type->u.structure = structure;
+			/*
+		FieldList p = e->field->type->u.structure;
+		
+		while(p!=NULL)
+		{
+			printf("*** name: %s, type: %d\n",p->name, p->type->kind);
+			p=p->tail;
+		}
+		*/
 			int ret = rb_insert(struct_table, e);
 			if (ret < 0) 
 			{
-				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->value->name);
+				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
 			}
-			return e->value->type;
+			return e->field->type;
 			
 		}
 		else
 		{
-			return e->value->type;
+			if (e->field->type->u.structure==NULL)
+			{
+				printf("Error at line %d: this struct contains it's own type member\n",child->value.lineno);
+			}
+			
+			e->field->type->u.structure = structure;
+			return e->field->type;
+			
 		}
 		
+		
+		
+	}
+	//匿名结构体
+	else if (strcmp(child->sibling->value.name, "null") == 0)
+	{
+		char temp[20];
+		sprintf(temp,"anonymous %d",anonymous_id);
+		
+		int len = strlen(temp);
+		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
+		strcpy(struct_name, temp);
+		printf("struct name: %s\n", struct_name);
+		Entry e = rb_search(struct_table, struct_name);
+		if (e==NULL)
+		{
+			Entry e = malloc(sizeof(struct Entry_));
+			e->field = malloc(sizeof(struct FieldList_));
+			e->field->name = (char*)malloc(len+1);
+			e->field->type = (Type_*)malloc(sizeof(Type_));
+			strcpy(e->field->name, struct_name);
+			e->field->type->kind = STRUCTURE;
+			e->field->tail = NULL;
+			int ret = rb_insert(struct_table, e);
+			if (ret < 0) 
+			{
+				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
+			}
+			return e->field->type;
+			
+		}
+		else
+		{
+			return e->field->type;
+		}
 		
 		
 	}
@@ -191,24 +262,26 @@ Type struct_specifier_handler(Node* node)
 		
 		if (e==NULL)
 		{
-			//return NULL;
+			//printf("%s\n",child->sibling->child->value.type_str );
 			Entry e = malloc(sizeof(struct Entry_));
-			e->value = malloc(sizeof(struct FieldList_));
-			e->value->name = (char*)malloc(len+1);
-			e->value->type = (Type_*)malloc(sizeof(Type_));
-			strcpy(e->value->name, child->sibling->child->value.type_str);
-			e->value->type->kind = STRUCTURE;
-			e->value->tail = NULL;
+			e->field = malloc(sizeof(struct FieldList_));
+			e->field->name = (char*)malloc(len+1);
+			e->field->type = (Type_*)malloc(sizeof(Type_));
+			strcpy(e->field->name, child->sibling->child->value.type_str);
+			e->field->type->kind = STRUCTURE;
+			e->field->tail = NULL;
+			e->field->type->u.structure =NULL;
+			
 			int ret = rb_insert(struct_table, e);
 			if (ret < 0) 
 			{
-				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->value->name);
+				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
 			}
-			return e->value->type;
+			return e->field->type;
 		}
 		else
 		{
-			return e->value->type;
+			return e->field->type;
 		}
 		
 		
@@ -219,81 +292,7 @@ Type struct_specifier_handler(Node* node)
 	}
 }
 
-FieldList vardec_handler(Node* node, Type type)
-{
-	Node* child = node->child;
-	FieldList var;
-	
-	//VarDec -> ID
-	if(strcmp(child->value.name, "ID")==0)
-	{
-		var = (FieldList)malloc(sizeof(FieldList_));
-		int len = strlen(child->value.type_str);
-		var->name = (char*)malloc(sizeof(len+1));
-		strcpy(var->name, child->value.type_str);
-		var->type = type;
-		var->tail = NULL;
-		return var;
-	}
-	//VarDec -> VarDec LB INT RB
-	else if (strcmp(child->value.name, "VarDec") == 0)
-	{
-		var = vardec_handler(child, type);
-		Type new_type = (Type)malloc(sizeof(Type_));
-		new_type -> kind = ARRAY;
-		new_type->u.array.size = child-> sibling->sibling->value.type_int;
-		if(type->kind == BASIC || type->kind == STRUCTURE)
-		{
-			new_type->u.array.elem = var->type;
-			var->type = new_type;
-		}
-		else if (type->kind == ARRAY)
-		{
-			while ((var->type->u.array.elem)->kind == ARRAY)
-				var->type = var->type->u.array.elem;
-			new_type->u.array.elem = var->type;
-			var->type = new_type;
-		}
-		return var;
-		
-	}
-	else
-	{
-		printf("ERROR, vardec_handler\n");
-		exit(1);
-	}
-}
 
-int extdeclist_handler(Node* node, Type type)
-{
-	FieldList var;
-	Node* child = node->child;
-	if (strcmp(child->value.name , "VarDec") == 0)
-	{
-		var = vardec_handler(child, type);
-		
-		Entry e = malloc(sizeof(struct Entry_));
-		e->value = var;
-		
-		int ret = rb_insert(var_table, e);
-		if (ret < 0) 
-		{
-			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->value->name);
-		}
-		if (child->sibling == NULL)
-			return 0;
-		else if (strcmp(child->sibling->value.name, "COMMA")==0)
-		{
-			//printf("COMMA\n");
-			return extdeclist_handler(child->sibling->sibling, type);
-		}
-	}
-	else
-	{
-		printf("error! extdeclist_handler\n");
-		exit(1);
-	}
-}
 
 int extdef_handler(Node* node)
 {
@@ -326,11 +325,11 @@ int extdef_handler(Node* node)
 		//函数返回值
 		func->type->u.func.return_type = type;
 		Entry e = malloc(sizeof(struct Entry_));
-		e->value = func;
+		e->field = func;
 		int ret = rb_insert(func_table, e);
 		if (ret < 0) 
 		{
-			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->value->name);
+			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
 		}
 		
 	}
@@ -341,21 +340,136 @@ int extdef_handler(Node* node)
 	}
 }
 
-FieldList paramdec_handler(Node* node)
+int extdeclist_handler(Node* node, Type type)
 {
-	Type type;
+	FieldList var;
 	Node* child = node->child;
-	if (strcmp(child->value.name, "Specifier") == 0)
+	if (strcmp(child->value.name , "VarDec") == 0)
 	{
-		type = specifier_handler(child);
-		return vardec_handler(child->sibling, type);
+		var = vardec_handler(child, type);
+		
+		Entry e = malloc(sizeof(struct Entry_));
+		e->field = var;
+		
+		int ret = rb_insert(var_table, e);
+		if (ret < 0) 
+		{
+			fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
+		}
+		if (child->sibling == NULL)
+			return 0;
+		else if (strcmp(child->sibling->value.name, "COMMA")==0)
+		{
+			//printf("COMMA\n");
+			return extdeclist_handler(child->sibling->sibling, type);
+		}
 	}
 	else
 	{
-		printf("error! paramdec_handler\n");
-		exit(0);
+		printf("error! extdeclist_handler\n");
+		exit(1);
 	}
 }
+
+FieldList vardec_handler(Node* node, Type type)
+{
+	Node* child = node->child;
+	FieldList var;
+	
+	//VarDec -> ID
+	if(strcmp(child->value.name, "ID")==0)
+	{
+		var = (FieldList)malloc(sizeof(FieldList_));
+		int len = strlen(child->value.type_str);
+		var->name = (char*)malloc(sizeof(len+1));
+		strcpy(var->name, child->value.type_str);
+		var->type = type;
+		var->tail = NULL;
+		return var;
+	}
+	//VarDec -> VarDec LB INT RB
+	else if (strcmp(child->value.name, "VarDec") == 0)
+	{
+		var = vardec_handler(child, type);
+		Type new_type = (Type)malloc(sizeof(Type_));
+		new_type -> kind = ARRAY;
+		new_type->u.array.size = child-> sibling->sibling->value.type_int;
+		if(type->kind == BASIC || type->kind == STRUCTURE)
+		{
+			//new_type->u.array.elem = var->type;
+
+			if (var->type->kind == BASIC)
+			{
+				//printf("%d------------\n",var->type->kind);
+				new_type->u.array.elem = var->type;
+				var->type = new_type;
+			}
+			else
+			{
+				Type q = var->type;
+				Type p = var->type->u.array.elem;
+				while (p->kind != BASIC)
+				{
+					q = p;
+					p = p->u.array.elem;
+				}
+				new_type->u.array.elem = p;
+				q->u.array.elem = new_type;
+			}
+				
+		
+		}
+		else
+			assert(0);
+	
+		return var;
+		
+	}
+	else
+	{
+		printf("ERROR, vardec_handler\n");
+		exit(1);
+	}
+}
+
+FieldList fundec_handler(Node* node)
+{
+	FieldList func;
+	FieldList param_list= NULL;
+	Node* child = node->child;
+	func = (FieldList)malloc(sizeof(FieldList_));
+	func->type = (Type)malloc(sizeof(Type_));
+	func->type->kind = FUNCTION;
+	func->tail = NULL;
+	int len = strlen(child->value.type_str);
+	func->name = (char*)malloc(len+1);
+	strcpy(func->name, child->value.type_str);
+	
+	int num = 0;
+	int i = 0;
+	//FuncDec -> ID LP VarList RP
+	if (strcmp(child->sibling->sibling->value.name, "VarList") == 0)
+	{
+		num = varlist_handler(child->sibling->sibling, &param_list, i);
+		func->type->u.func.num = num;
+		func->type->u.func.param = param_list;
+		
+
+	}
+	//FuncDec-> ID LP RP
+	else if (strcmp(child->sibling->sibling->value.name, "RP")==0)
+	{
+		func->type->u.func.param = NULL;
+	}
+	else
+	{
+		printf("error, funcdec_handler\n%s\n",child->sibling->sibling->value.name);
+		exit(1);
+	}
+	return func;
+	
+}
+
 
 int varlist_handler(Node* node, FieldList* list, int index)
 {
@@ -413,45 +527,422 @@ int varlist_handler(Node* node, FieldList* list, int index)
 		
 }
 
-FieldList fundec_handler(Node* node)
-{
-	FieldList func;
-	FieldList param_list= NULL;
-	Node* child = node->child;
-	func = (FieldList)malloc(sizeof(FieldList_));
-	func->type = (Type)malloc(sizeof(Type_));
-	func->type->kind = FUNCTION;
-	func->tail = NULL;
-	int len = strlen(child->value.type_str);
-	func->name = (char*)malloc(len+1);
-	strcpy(func->name, child->value.type_str);
-	
-	int num = 0;
-	int i = 0;
-	//FuncDec -> ID LP VarList RP
-	if (strcmp(child->sibling->sibling->value.name, "VarList") == 0)
-	{
-		num = varlist_handler(child->sibling->sibling, &param_list, i);
-		func->type->u.func.num = num;
-		func->type->u.func.param = param_list;
-		
 
-	}
-	//FuncDec-> ID LP RP
-	else if (strcmp(child->sibling->sibling->value.name, "RP")==0)
+FieldList paramdec_handler(Node* node)
+{
+	Type type;
+	Node* child = node->child;
+	if (strcmp(child->value.name, "Specifier") == 0)
 	{
-		func->type->u.func.param = NULL;
+		type = specifier_handler(child);
+		return vardec_handler(child->sibling, type);
 	}
 	else
 	{
-		printf("error, funcdec_handler\n%s\n",child->sibling->sibling->value.name);
-		exit(1);
+		printf("error! paramdec_handler\n");
+		exit(0);
 	}
-	return func;
+}
+
+FieldList deflist_handler(Node* node,  int flag)
+{
+	
+	FieldList func;
+	FieldList structure = NULL;
+	Node* p = node->child;
+	while (strcmp(p->value.name, "Def")==0)
+	{
+		
+		
+		def_handler(p, &structure, flag);
+		p = p->sibling;
+		
+		if (p!=NULL)
+		{
+			
+			p = p->child;
+			if (p==NULL)
+				break;
+		}
+	}
+		
+	return structure;
+		
+	
+	
+}
+void def_handler(Node* node, FieldList *list, int flag)
+{
+	
+	Node* child = node->child;
+	
+	assert(strcmp(child->value.name, "Specifier")==0);
+	
+	Type type = specifier_handler(child);
+
+	declist_handler(child->sibling, type, list, flag);
+	
+	
+}
+void declist_handler(Node* node, Type type, FieldList* list, int flag)
+{
+	Node* child = node->child;
+	assert(strcmp(child->value.name, "Dec")==0);
+	FieldList var;
+	var = dec_handler(child, type, flag);
+	
+	//连接到参数列表尾部
+	FieldList p = *list;
+	FieldList q = *list;
+	if (*list == NULL)
+	{
+		*list = var;
+		(*list)->tail = NULL;
+		
+	}
+	else
+	{
+		FieldList p = *list;
+		FieldList q = (*list)->tail;
+		while (q!=NULL)
+		{
+			p=q;
+			q = q->tail;
+		}
+		q = var;
+		p->tail = q;
+		
+			
+	}
+	if (child->sibling!=NULL && strcmp(child->sibling->value.name, "COMMA")==0)
+	{
+		
+		declist_handler(child->sibling->sibling, type, list, flag);
+	}
+	
 	
 }
 
+FieldList dec_handler(Node* node, Type type, int flag)
+{
+	Node* child = node->child;
+	assert(strcmp(child->value.name, "VarDec")==0);
+	
+	if (flag == 1) //在结构体中
+	{
+		if (child->sibling != NULL)
+			printf("Error type 15 at line %d: Cannot assign variables in structure\n", child->value.lineno);
+		
+	}
+	if (child->sibling != NULL && child->sibling->sibling!=NULL)
+	{
+		Type temp = exp_handler(child->sibling->sibling);
+		if (is_type_eq(temp, type)!=1)
+		{
+			printf("Error Type 5 at line %d: Type mismatched\n", child->value.lineno);
+		}
+	}
+	
+	return vardec_handler(child, type);
+}
 
+int is_leftvalue(Node* node)
+{
+	Node* child = node->child;
+	if (strcmp(child->value.name, "INT")==0 || strcmp(child->value.name, "FLOAT")==0 )
+		return 0;
+	if (strcmp(child->value.name, "LP")==0
+		||strcmp(child->value.name, "MINUS")==0
+		||strcmp(child->value.name, "NOT")==0 )
+		
+		return is_leftvalue(child->sibling);
+	
+	if (strcmp(child->value.name, "ID")==0)
+		return 1;
+		
+	if (strcmp(child->value.name, "Exp")==0)
+		return is_leftvalue(child);
+	
+	
+	return 1;
+}
+
+int is_type_eq(Type lt, Type rt)
+{
+	if (lt==NULL || rt==NULL)
+		return 0;
+	
+	if (lt->kind != rt->kind)
+		return 0;
+	
+	if (lt->kind == BASIC)
+	{
+		if (lt->u.basic == rt->u.basic)
+			return 1;
+		else
+			return 0;
+	}
+	if (lt->kind == ARRAY)
+		return is_type_eq(lt->u.array.elem, rt->u.array.elem);
+	
+	if (lt->kind == STRUCTURE)
+	{
+		if(strcmp(lt->u.structure->name, rt->u.structure->name)==0)
+			return 1;
+		else
+			return 0;
+	}
+	
+	return 0;
+}
+
+int is_param_eq(FieldList param, Node* node)
+{
+	//没有参数
+	if (param==NULL && strcmp(node->value.name, "RP")==0)
+		return 1;
+	assert(strcmp(node->value.name, "Args")==0);
+	Type type = exp_handler(node->child);
+	if (is_type_eq(param->type, type)==1)
+	{
+		if (param->tail==NULL && node->child->sibling ==NULL )
+			return 1;
+		else
+			return is_param_eq(param->tail, node->child->sibling->sibling);
+	}
+	else
+		return 0;
+	
+}
+
+Type exp_handler(Node* node)
+{
+	Node* child = node->child;
+	Type type = malloc(sizeof(Type_));
+	if (strcmp(child->value.name, "Exp") == 0)
+	{
+		//exp -> exp assignop exp
+		if (child->sibling!=NULL && strcmp(child->sibling->value.name, "ASSIGNOP")==0)
+		{
+			if (! is_leftvalue(child))
+			{
+				printf("Error Type 6 at line %d: The left-hand side of an assignment must be a variable\n", 
+					child->value.lineno);
+			}
+			Type left_type = exp_handler(child);
+			Type right_type = exp_handler(child->sibling->sibling);
+			if (is_type_eq(left_type, right_type)==0)
+			{
+				printf("Error Type 5 at line %d: Type mismatched\n", child->value.lineno);
+			}
+			
+			return NULL;	
+		}
+		
+		//exp -> exp and exp 
+		//   | exp or exp
+		else if (child->sibling!=NULL && (strcmp(child->sibling->value.name, "AND")==0 || (strcmp(child->sibling->value.name, "OR")==0 )))
+		{
+			Type left_type = exp_handler(child);
+			Type right_type = exp_handler(child->sibling->sibling);
+			if (is_type_eq(left_type, right_type)==0)
+			{
+				printf("Error type 7 at Line %d: Type mismatched for operands",child->value.lineno);
+				return NULL;
+			}
+			else if (left_type->kind!=BASIC || right_type->kind!=BASIC || left_type->u.basic!=TYPE_INT || right_type->u.basic!=TYPE_INT)
+			{
+				printf("Error type 7 at Line %d: Type mismatched for operands",child->value.lineno);
+				return NULL;
+			}
+			type->kind = BASIC;
+			type->u.basic = left_type->u.basic;
+			return type;
+		}
+		
+		else if(child->sibling != NULL &&(strcmp(child->sibling->value.name, "RELOP") == 0 
+			||strcmp(child->sibling->value.name, "PLUS") == 0 
+			||strcmp(child->sibling->value.name, "MINUS") == 0 
+			||strcmp(child->sibling->value.name, "STAR") == 0 
+			||strcmp(child->sibling->value.name, "DIV") == 0 ))
+		{
+			Type left_type = exp_handler(child);
+			Type right_type = exp_handler(child->sibling->sibling);
+			if (is_type_eq(left_type, right_type)==0)
+			{
+				printf("Error type 7 at Line %d: Type mismatched for operands",child->value.lineno);
+				return NULL;
+			}
+			if (strcmp(child->sibling->value.name, "RELOP") == 0)
+			{
+				type -> kind = BASIC;
+				type -> u.basic = TYPE_INT;
+			}
+			else
+			{
+				type -> kind = left_type->kind;
+				type->u.basic = left_type->u.basic;
+			}
+			return type;
+			
+		}
+		
+		else if(child->sibling!=NULL && strcmp(child->sibling->value.name, "LB"))
+		{
+			Type type1 = exp_handler(child);
+			Type type2 = exp_handler(child->sibling->sibling);
+			if (type1!=NULL&&type2!=NULL)
+			{
+				if (type1->kind != ARRAY)
+				{
+					printf("Error Type 10 at line %d: '%s' is not an array\n", 
+						child->value.lineno, child->child->value.type_str);
+					return NULL;
+				}
+				else
+				{
+					if (type2->kind != BASIC || type2->u.basic != TYPE_INT)
+					{
+						if (type2->u.basic==TYPE_FLOAT)
+							printf("Error Type 12 at line %d: '%f' is not an interger\n", 
+								   child->value.lineno,child->value.type_float);
+						else
+							printf("Error Type 12 at line %d: array index is not an interger\n", 
+								   child->value.lineno);
+						return NULL;
+					}
+					else
+					{
+						type->kind = type1->u.array.elem->kind;
+						if(type->kind == BASIC)
+							type->u.basic = type1->u.array.elem->u.basic;
+						else if (type->kind == ARRAY)
+							type->u.array = type1->u.array.elem->u.array;
+						else
+							type->u.structure = type1->u.array.elem->u.structure;
+						
+						return type;
+					}
+				}
+			}
+			else
+				return NULL;
+			
+		}
+		else if(child->sibling!=NULL && strcmp(child->sibling->value.name, "DOT"))
+		{
+			Type temp = exp_handler(child->child);
+			Node* id = child->sibling->sibling;
+			if (temp!=NULL)
+			{
+				if (temp->kind != STRUCTURE);
+				{
+					printf("Error Type 13 at line %d: Illegal use of '.'\n", child->value.lineno);
+					return NULL;
+				}
+				FieldList st = temp->u.structure;
+				while (st!=NULL)
+				{
+					if (strcmp(st->name, id->value.type_str)==0)
+						break;
+					st = st->tail;
+				}
+				if (st==NULL)
+				{
+					printf("Error type 14 at line %d: Un-existed field '%s'\n", 
+						child->value.lineno, id->value.type_str);
+					return NULL;
+				}
+				return st->type;
+			}
+			return NULL;
+		}
+		
+		else 
+			assert(0);
+		
+	}
+	
+	else if (strcmp(child->value.name, "LP")==0 
+		|| strcmp(child->value.name, "MINUS")==0 
+		|| strcmp(child->value.name, "NOT")==0 )
+	{
+		type = exp_handler(child->sibling);
+		return type;
+	}
+	
+	
+	else if (strcmp(child->value.name, "ID")==0 && child->sibling!=NULL)
+	{
+		//Entry rb_search(struct rb_root *root, char* name)
+		printf("func name:%s\n", child->value.type_str);
+		Entry e = rb_search(func_table, child->value.type_str);
+		if (e == NULL)
+		{
+			e = rb_search(var_table, child->value.type_str);
+			e = rb_search(struct_table, child->value.type_str);	
+			if (e ==NULL)
+				printf("Error type 2 at line %d: Undefined function '%s'\n",child->value.lineno,child->value.type_str);
+			else
+				printf("Error type 11 at line %d: '%s' is not a function\n",child->value.lineno,child->value.type_str);
+			return NULL;
+		}
+		
+		
+		if ((e->field->type->u.func.param == NULL 
+			&& strcmp(child->sibling->sibling->value.name, "RP")!=0)
+			||(e->field->type->u.func.param != NULL 
+			&& strcmp(child->sibling->sibling->value.name, "RP")==0))
+		{
+			printf("Error Type 9 at line %d: The method '%s' is not applicable for the arguments\n", child->value.lineno, child->value.type_str);
+		}
+		
+		else if (is_param_eq(e->field->type->u.func.param,  child->sibling->sibling)!=1)
+		{
+			printf("Error Type 9 at line %d: The method '%s' is not applicable for the arguments\n", child->value.lineno, child->value.type_str);
+		}
+		
+		type->kind = e->field->type->u.func.return_type->kind;
+		if (e->field->type->u.func.return_type->kind == BASIC)
+		{
+			type->u.basic = e->field->type->u.func.return_type->u.basic;
+		}
+		else if (e->field->type->u.func.return_type->kind == ARRAY)
+		{
+			type->u.array = e->field->type->u.func.return_type->u.array;
+		}
+		else
+		{
+			type->u.structure = e->field->type->u.func.return_type->u.structure;
+		}
+		return type;
+			
+	}
+	else if(strcmp(child->value.name, "INT") == 0)
+	{
+		type->kind = BASIC;
+		assert(TYPE_INT == 0);
+		type->u.basic = TYPE_INT;
+		return type;
+	}
+	
+	else if (strcmp(child->value.name, "FLOAT") == 0)
+	{
+		type->kind = BASIC;
+		assert(TYPE_FLOAT == 1);
+		type->u.basic = TYPE_FLOAT;
+		return type;
+	}
+	else if (strcmp(child->value.name, "ID") && child->sibling == NULL)
+	{
+		Entry e = rb_search(func_table, child->value.type_str);
+		if (e==NULL)
+			printf("Error type 1 at line %d: Undefined variable '%s'\n",child->value.lineno, child->value.type_str);
+		return NULL;
+	}
+	else
+		assert(0);
+}
 
 
 void semantic(Node* node, int level)
@@ -463,7 +954,7 @@ void semantic(Node* node, int level)
 		for (i = 0; i<level; i++) //打印缩进
 			printf(" ");
 		
-		printf("%s", node->value.name);
+		printf("%s", node->field.name);
 	}
 	else  //该节点在归约时，被替换为空串，所以不输出
 	{

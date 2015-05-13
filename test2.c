@@ -1,12 +1,9 @@
-int func()
+struct st1
 {
-	int i;
-}
-int main(int n, float f)
-{
+	int a;
+	float b;
+	struct st1 s;
+};
 
-}
-int test(int haha)
-{
-	
-}
+
+
