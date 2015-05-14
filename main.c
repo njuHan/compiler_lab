@@ -19,9 +19,10 @@ int main(int argc, char** argv)
 	yyparse();
 	
 	output_tree(root,0);
-	printf("\n------struct-----\n");
+	
 	
 	semantic_scan(root,0);
+	printf("\n------struct-----\n");
 	print_rbtree(global_struct_table);
 	
 	printf("\n-----global var------\n");

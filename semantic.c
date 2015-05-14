@@ -197,7 +197,11 @@ Type struct_specifier_handler(Node* node)
 		int len = strlen(child->sibling->child->value.type_str);
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, child->sibling->child->value.type_str);
-		Entry e = rb_search(global_struct_table, struct_name);
+		
+		//Entry e = rb_search(global_struct_table, struct_name);
+		//全栈搜索
+		Entry e = stack_search(struct_table, struct_name);
+		
 		if (e==NULL)
 		{
 			Entry e = malloc(sizeof(struct Entry_));
@@ -217,7 +221,9 @@ Type struct_specifier_handler(Node* node)
 			p=p->tail;
 		}
 		*/
-			int ret = rb_insert(global_struct_table, e);
+			//int ret = rb_insert(global_struct_table, e);
+			
+			int ret = rb_insert(get_elemt_at(struct_table, 0), e);
 			if (ret < 0) 
 			{
 				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
@@ -227,9 +233,16 @@ Type struct_specifier_handler(Node* node)
 		}
 		else
 		{
-			if (e->field->type->u.structure==NULL)
+			
+			
+			if (e->field->type->u.structure==NULL && structure!= NULL)
 			{
+				
 				printf("Error at line %d: this struct contains it's own type member\n",child->value.lineno);
+			}
+			else
+			{
+				printf("Error type 16 at Line %d: Duplicated name '%s'.\n", child->value.lineno, struct_name);
 			}
 			
 			e->field->type->u.structure = structure;
@@ -250,7 +263,7 @@ Type struct_specifier_handler(Node* node)
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, temp);
 		printf("struct name: %s\n", struct_name);
-		Entry e = rb_search(global_struct_table, struct_name);
+		Entry e = stack_search(struct_table, struct_name);
 		if (e==NULL)
 		{
 			Entry e = malloc(sizeof(struct Entry_));
@@ -260,7 +273,8 @@ Type struct_specifier_handler(Node* node)
 			strcpy(e->field->name, struct_name);
 			e->field->type->kind = STRUCTURE;
 			e->field->tail = NULL;
-			int ret = rb_insert(global_struct_table, e);
+			
+			int ret = rb_insert(get_elemt_at(struct_table, 0), e);
 			if (ret < 0) 
 			{
 				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
@@ -285,10 +299,15 @@ Type struct_specifier_handler(Node* node)
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, child->sibling->child->value.type_str);
 		
-		Entry e = rb_search(global_struct_table, struct_name);
+		Entry e = stack_search(struct_table, struct_name);
 		
 		if (e==NULL)
 		{
+			if (struct_table->size>1)
+			{
+				printf("Error type 17 at Line %d: Undefined structure '%s'.\n", child->value.lineno, struct_name);
+			}
+			
 			//printf("%s\n",child->sibling->child->value.type_str );
 			Entry e = malloc(sizeof(struct Entry_));
 			e->field = malloc(sizeof(struct FieldList_));
@@ -299,15 +318,19 @@ Type struct_specifier_handler(Node* node)
 			e->field->tail = NULL;
 			e->field->type->u.structure =NULL;
 			
-			int ret = rb_insert(global_struct_table, e);
+			int ret = rb_insert(get_elemt_at(struct_table, 0), e);
 			if (ret < 0) 
 			{
 				fprintf(stderr, "ERROR!\nThe %s already exists.\n", e->field->name);
 			}
 			return e->field->type;
+			
 		}
 		else
 		{
+			
+			printf("Error type 16 at Line %d: Duplicated name '%s'.\n", child->value.lineno, struct_name);
+			
 			return e->field->type;
 		}
 		
@@ -578,8 +601,14 @@ void compst_handler(Node* node)
 	rb_root* temp_table;
 	temp_table = (rb_root*)malloc(sizeof(rb_root));
 	*temp_table = RB_ROOT;
-	
 	push(var_table, temp_table);
+	
+	//局部作用域struct表初始化
+	rb_root* temp_st;
+	temp_st = (rb_root*)malloc(sizeof(rb_root));
+	*temp_st = RB_ROOT;
+	push(struct_table, temp_st);
+	printf("-----###################stack size: %d--------\n", struct_table->size);
 
 	Node* def_list = node->child->sibling;
 	assert(strcmp(def_list->value.name, "DefList")==0);
@@ -602,7 +631,20 @@ void compst_handler(Node* node)
 		
 		
 	}
-	pop(var_table);
+	rb_root* temp = pop(var_table);
+	printf("-----now pop var table:--------\n");
+	print_rbtree(temp);
+	printf("-------------------\n");
+	
+	
+	
+	
+	printf("---********************--now pop struct table, size: %d--------\n", struct_table->size);
+	rb_root* st = pop(struct_table);
+	assert(st!=global_struct_table);
+	print_rbtree(st);
+	printf("-------------------\n");
+	
 	
 	
 }
