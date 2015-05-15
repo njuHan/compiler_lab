@@ -64,6 +64,23 @@ rb_root* global_struct_table;
 rb_root* func_table;
 
 
+typedef struct Func_item
+{
+	FieldList	field;
+	struct Func_item* next;
+	
+}Func_item;
+
+Func_item* funclist_head;
+
+FieldList search_func(char* name);
+
+void insert_func_at_head(FieldList f);
+
+FieldList search_param(char* name);
+
+
+
 void table_init();
 
 
@@ -108,6 +125,7 @@ FieldList paramdec_handler(Node* node);
  */
 //statements
 void compst_handler(Node* node);
+void stmtlist_handler(Node* node);
 
 //local definition
 FieldList deflist_handler(Node* node,   int flag);
@@ -118,6 +136,7 @@ FieldList dec_handler(Node* node, Type type,  int flag);
 //expressions
 Type exp_handler(Node* node);
 
+void return_handler(Node* node);
 
 void semantic(Node* node, int level);
 void semantic_scan(Node* node, int level);

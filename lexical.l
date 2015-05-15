@@ -28,7 +28,7 @@ letter [a-zA-Z]
 ";"  {yylval.type_node =  new_node("SEMI",NO_TYPE, "") ;return SEMI ;}
 ","   {yylval.type_node = new_node("COMMA", NO_TYPE, ""); return COMMA ;}
 "="   {yylval.type_node = new_node("ASSIGNOP", NO_TYPE, "");  return ASSIGNOP ;}
-">"|"<"|">="|"<="|"=="|"!="  {yylval.type_node = new_node("RELOP", TYPE_STR, yytext);  return RELOP ;}
+">"|"<"|">="|"<="|"=="|"!="  {yylval.type_node = new_node("RELOP", NO_TYPE, yytext);  return RELOP ;}
 "+" {yylval.type_node = new_node("PLUS", NO_TYPE, ""); return PLUS ;}
 "-" {yylval.type_node = new_node("MINUS", NO_TYPE, ""); return MINUS ;}
 "*" {yylval.type_node = new_node("STAR", NO_TYPE, ""); return STAR ;};
@@ -37,7 +37,8 @@ letter [a-zA-Z]
 "||" {yylval.type_node = new_node("OR", NO_TYPE, ""); return OR ;} 
 "." {yylval.type_node = new_node("DOT", NO_TYPE, ""); return DOT ;}
 "!" {yylval.type_node = new_node("NOT", NO_TYPE, "");  return NOT ;}
-"int"|"float" {yylval.type_node = new_node("TYPE", TYPE_STR, yytext);  return TYPE ;}
+"int" {yylval.type_node = new_node("TYPE", TYPE_INT, yytext);  return TYPE ;}
+"float" {yylval.type_node = new_node("TYPE", TYPE_FLOAT, yytext);  return TYPE ;}
 "("  {yylval.type_node = new_node("LP", NO_TYPE, ""); return LP ;}
 ")"  {yylval.type_node = new_node("RP", NO_TYPE, ""); return RP ;}
 "["  {yylval.type_node = new_node("LB", NO_TYPE, ""); return LB ;}

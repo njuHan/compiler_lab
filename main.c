@@ -22,22 +22,37 @@ int main(int argc, char** argv)
 	
 	
 	semantic_scan(root,0);
-	printf("\n------struct-----\n");
-	print_rbtree(global_struct_table);
+	//printf("\n------struct-----\n");
+	//print_rbtree(global_struct_table);
 	
-	printf("\n-----global var------\n");
-	print_rbtree(global_var_table);
+	//printf("\n-----global var------\n");
+	//print_rbtree(global_var_table);
 	
-	int n = var_table->size;
-	int i=0;
-	for (i=0; i<n-1; i++)
+	//printf("\n-----function------\n");
+	//print_rbtree(func_table);
+	
+	/*
+	FieldList temp;
+	while(funclist_head!=NULL)
 	{
-		printf("\n-----compst %d var------\n", i);
-		print_rbtree(pop(var_table));
+		
+		temp = funclist_head->field;
+		printf("func name: %s\n", temp->name);
+		printf("return type: %d; param num: %d; ", temp->type->u.func.return_type->kind, temp->type->u.func.num);
+		printf("param list: ");
+		FieldList p = temp->type->u.func.param;
+		if (p==NULL)
+		printf("No param");
+		while (p!=NULL)
+		{
+			printf("type: %d, name: %s, ",p->type->kind, p->name);
+			p = p->tail;
+		}
+		funclist_head = funclist_head -> next;
+		printf("\n");
 	}
-
+	*/
 	
-	printf("\n-----function------\n");
-	print_rbtree(func_table);
+	
 	return 0;
 }
