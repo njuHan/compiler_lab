@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 	yyrestart(f);
 	yyparse();
 	
-	output_tree(root,0);
+	//output_tree(root,0);
 	
 	
 	semantic_scan(root,0);

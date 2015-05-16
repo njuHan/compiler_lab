@@ -60,8 +60,9 @@ rb_root* global_var_table;
 Stack struct_table;
 rb_root* global_struct_table;
 
-//函数类型表
-rb_root* func_table;
+
+//rb_root* func_table;
+//函数表改用一个链表队列实现
 
 
 typedef struct Func_item
@@ -71,6 +72,7 @@ typedef struct Func_item
 	
 }Func_item;
 
+//函数类型表
 Func_item* funclist_head;
 
 FieldList search_func(char* name);

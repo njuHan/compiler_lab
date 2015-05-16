@@ -108,8 +108,8 @@ ExtDef : Specifier ExtDecList SEMI
 			}
 		| Specifier FunDec SEMI
 			{
-				$$ = new_tree(3, $1, $2, $3);
-				set_value($$, "ExtDef", @$.first_line);
+				printf("Error type B at Line %d: Incomplete definition of function .\n",yylineno);
+				errcount++;
 				
 			}
 	

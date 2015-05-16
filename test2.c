@@ -5,6 +5,7 @@ struct st1
 {
 	int st_a;
 	int st_b;
+	struct st1 a;
 	
 };
 struct st1;

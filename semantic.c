@@ -174,10 +174,11 @@ void print_rbtree(struct rb_root *tree)
 
 void table_init()
 {
+	//匿名结构体计数
 	anonymous_id = 0;
 	
-	func_table = (rb_root*)malloc(sizeof(rb_root));
-	*func_table = RB_ROOT;
+	//func_table = (rb_root*)malloc(sizeof(rb_root));
+	//*func_table = RB_ROOT;
 	
 	global_struct_table = (rb_root*)malloc(sizeof(rb_root));
 	*global_struct_table = RB_ROOT;
@@ -871,6 +872,8 @@ FieldList dec_handler(Node* node, Type type, int flag)
 	//	FieldList l = vardec_handler(child, type);
 		
 		Type temp = exp_handler(child->sibling->sibling);
+		//if (temp==NULL || type==NULL)
+		//	assert(0);
 		
 		if (is_type_eq(temp, type)!=1)
 		{
@@ -982,6 +985,8 @@ Type exp_handler(Node* node)
 			//assert(right_type!=NULL);
 			//printf("%d, %d\n", left_type->kind, left_type->u.basic);
 			//printf("%d, %d\n", right_type->kind, right_type->u.basic);
+			if (left_type==NULL || right_type==NULL)
+				return NULL;
 			if (is_type_eq(left_type, right_type)==0)
 			{
 				printf("Error type 5 at line %d: Type mismatched for assignment.\n", child->value.lineno);
@@ -997,6 +1002,8 @@ Type exp_handler(Node* node)
 		{
 			Type left_type = exp_handler(child);
 			Type right_type = exp_handler(child->sibling->sibling);
+			if (left_type==NULL || right_type == NULL)
+				return NULL;
 			if (is_type_eq(left_type, right_type)==0)
 			{
 				printf("Error type 7 at Line %d: Type mismatched for operands\n",child->value.lineno);
@@ -1020,6 +1027,10 @@ Type exp_handler(Node* node)
 		{
 			Type left_type = exp_handler(child);
 			Type right_type = exp_handler(child->sibling->sibling);
+			
+			if (left_type==NULL || right_type == NULL)
+				return NULL;
+			
 			if (is_type_eq(left_type, right_type)==0)
 			{
 				printf("Error type 7 at Line %d: Type mismatched for operands\n",child->value.lineno);
@@ -1241,31 +1252,6 @@ void return_handler(Node* node)
 
 void semantic(Node* node, int level)
 {
-	/*
-	int i=0;
-	if(strcmp(node->value.name,"null")!=0)  //节点内容不为空
-	{	
-		for (i = 0; i<level; i++) //打印缩进
-			printf(" ");
-		
-		printf("%s", node->field.name);
-	}
-	else  //该节点在归约时，被替换为空串，所以不输出
-	{
-		return;
-	}
-	*/
-	/*
-	if (strcmp(node->value.name, "Specifier")==0)
-	{
-		printf("find a specifier\n");
-		Type  temp = specifier_handler(node);
-		if (temp != NULL)
-		{
-			printf("%d\n", temp->kind);
-		}
-	}
-	*/
 	
 
 	if (strcmp(node->value.name, "ExtDef")==0)

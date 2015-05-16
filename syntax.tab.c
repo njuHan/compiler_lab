@@ -1528,8 +1528,8 @@ yyreduce:
   case 8:
 #line 110 "syntax.y" /* yacc.c:1646  */
     {
-				(yyval.type_node) = new_tree(3, (yyvsp[-2].type_node), (yyvsp[-1].type_node), (yyvsp[0].type_node));
-				set_value((yyval.type_node), "ExtDef", (yyloc).first_line);
+				printf("Error type B at Line %d: Incomplete definition of function .\n",yylineno);
+				errcount++;
 				
 			}
 #line 1536 "syntax.tab.c" /* yacc.c:1646  */
