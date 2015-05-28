@@ -2,6 +2,8 @@
 #include <string.h>
 #include <assert.h>
 
+int var_id = 1;
+
 FieldList search_func(char* name)
 {
 	if(funclist_head == NULL)
@@ -30,7 +32,6 @@ FieldList search_param(char* name)
 		return NULL;
 	
 	FieldList temp = funclist_head->field;
-	
 	FieldList p = temp->type->u.func.param;
 	if (p==NULL)
 		return NULL;
@@ -42,8 +43,41 @@ FieldList search_param(char* name)
 		
 		p = p->tail;
 	}
+	return p;
 	
-	
+}
+
+//该函数用于lab3
+FieldList search_param_func(char* param, char* func_name)
+{
+	if (funclist_head == NULL)
+		return NULL;
+	Func_item* temp = funclist_head;
+	while(temp!=NULL)
+	{
+		if (strcmp(func_name,temp->field->name)==0)
+		{
+			break;
+		}
+		temp = temp->next;
+	}
+	if (temp!=NULL)
+	{
+		FieldList p = temp->field->type->u.func.param;
+		if (p==NULL)
+			return NULL;
+		while (p!=NULL)
+		{
+			//printf("type: %d, name: %s, ",p->type->kind, p->name);
+			if (strcmp(p->name, param)==0)
+				return p;
+		
+			p = p->tail;
+		}
+		return p;
+	}
+	else
+		return NULL;
 }
 
 Entry stack_search(Stack s, char* name)
@@ -196,6 +230,42 @@ void table_init()
 	
 	funclist_head = NULL;
 	
+	
+	//以下内容用于lab3
+	FieldList read = (FieldList)malloc(sizeof(struct FieldList_));
+	read->name = malloc(sizeof(char)*5);
+	strcpy(read->name, "read");
+	read->type = (Type)malloc(sizeof(struct Type_));
+	read->type->kind = FUNCTION;
+	read->type->u.func.return_type = (Type)malloc(sizeof(struct Type_));
+	read->type->u.func.return_type->kind = BASIC;
+	read->type->u.func.return_type->u.basic = 0;
+	read->type->u.func.num = 0;
+	read->type->u.func.param = NULL;
+	read->tail = NULL; 
+	insert_func_at_head(read);
+	
+	FieldList write = (FieldList)malloc(sizeof(struct FieldList_));
+	write->name = malloc(sizeof(char)*6);
+	strcpy(write->name, "write");
+	write->type = (Type)malloc(sizeof(struct Type_));
+	write->type->kind = FUNCTION;
+	write->type->u.func.return_type = (Type)malloc(sizeof(struct Type_));
+	write->type->u.func.return_type->kind = BASIC;
+	write->type->u.func.return_type->u.basic = 0;
+	write->type->u.func.num = 1;
+	write->type->u.func.param = (FieldList)malloc(sizeof(struct FieldList_));
+	
+	write->type->u.func.param->name = malloc(sizeof(char)*6);
+	strcpy(write->type->u.func.param->name, "wtemp");
+	
+	write->type->u.func.param->type = (Type)malloc(sizeof(struct Type_));
+	write->type->u.func.param->type->kind = BASIC;
+	write->type->u.func.param->type->u.basic = 0;
+	write->type->u.func.param->tail = NULL;
+	write->tail = NULL;  
+	insert_func_at_head(write);
+	
 }
 
 
@@ -239,12 +309,16 @@ Type struct_specifier_handler(Node* node)
 		
 	if (strcmp(child->sibling->value.name, "OptTag") == 0 )
 	{
-		Node* def_list = child->sibling->sibling->sibling;
-		assert(strcmp(def_list->value.name, "DefList")==0);
 		int in_struct = 1;
+		Node* def_list = child->sibling->sibling->sibling;
+		//printf("%s\n",def_list->value.name);
+		FieldList structure;
+		if (strcmp(def_list->value.name, "DefList")==0 )
+			structure = deflist_handler(def_list, in_struct);
+		else
+			structure = NULL;
 		
-		FieldList structure = deflist_handler(def_list, in_struct);
-		
+	
 		int len = strlen(child->sibling->child->value.type_str);
 		char* struct_name = (char*)malloc(sizeof(char)*(len+1));
 		strcpy(struct_name, child->sibling->child->value.type_str);
@@ -510,6 +584,7 @@ FieldList vardec_handler(Node* node, Type type)
 		var->name = (char*)malloc(sizeof(len+1));
 		strcpy(var->name, child->value.type_str);
 		var->type = type;
+		var->id = var_id++;
 		var->tail = NULL;
 		return var;
 	}
@@ -716,21 +791,16 @@ void compst_handler(Node* node)
 	if (strcmp(stmt_list->value.name, "StmtList")==0)
 		stmtlist_handler(stmt_list);
 	
-	rb_root* temp = pop(var_table);
-	assert(temp!=global_var_table);
-	/*
-	printf("-----now pop var table:--------\n");
-	print_rbtree(temp);
-	printf("-------------------\n");
-	*/
+	//rb_root* temp = pop(var_table); //lab3没有全局变量所以不弹栈，若是lab2则需pop
+	//assert(temp!=global_var_table); //lab3没有全局变量所以不弹栈
+
 	
 	
-	rb_root* st = pop(struct_table);
-	assert(st!=global_struct_table);
-	//printf("---********************--now pop struct table, size: %d--------\n", struct_table->size);
 	
-	//print_rbtree(st);
-	//printf("-------------------\n");
+	//rb_root* st = pop(struct_table); //lab3没有全局变量所以不弹栈
+	//assert(st!=global_struct_table); //lab3没有全局变量所以不弹栈
+
+	
 	
 	
 	
@@ -1290,6 +1360,8 @@ void semantic_scan(Node* node , int level)
 	//printf("------------\n");
 	 //print_rbtree(struct_table);
 }
+
+
 
 
 

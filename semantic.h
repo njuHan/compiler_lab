@@ -35,6 +35,7 @@ typedef struct Type_
 
 typedef struct FieldList_
 {
+	int id; //用于lab3,标志出变量的ID
 	char* name; //域的名字
 	Type type;  //域的类型
 	FieldList tail; //下一个域
@@ -45,7 +46,7 @@ typedef struct Entry_
 {
 	//红黑树结点
 	struct rb_node node;
-	//value->name 作为红黑树中的keystring
+	//field->name 作为红黑树中的keystring
 	FieldList field;
 }Entry_;
 
@@ -143,7 +144,8 @@ void return_handler(Node* node);
 void semantic(Node* node, int level);
 void semantic_scan(Node* node, int level);
 
-
+//used in lab3
+FieldList search_param_func(char* param, char* func_name);
 
 
 #endif

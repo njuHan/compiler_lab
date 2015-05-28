@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "tree.h"
 #include "semantic.h"
+#include "ir.h"
 int main(int argc, char** argv)
 {
 	table_init();
@@ -18,10 +19,15 @@ int main(int argc, char** argv)
 	yyrestart(f);
 	yyparse();
 	
-	//output_tree(root,0);
+	output_tree(root,0);
 	
 	
 	semantic_scan(root,0);
+	ir_scan(root);
+	InterCodes temp = ir_list;
+
+		
+	print_ir(ir_list);
 	//printf("\n------struct-----\n");
 	//print_rbtree(global_struct_table);
 	

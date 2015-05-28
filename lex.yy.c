@@ -863,7 +863,7 @@ YY_RULE_SETUP
 case 4:
 YY_RULE_SETUP
 #line 31 "lexical.l"
-{yylval.type_node = new_node("RELOP", NO_TYPE, yytext);  return RELOP ;}
+{yylval.type_node = new_node("RELOP", TYPE_STR, yytext);  return RELOP ;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP

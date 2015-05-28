@@ -28,7 +28,7 @@ letter [a-zA-Z]
 ";"  {yylval.type_node =  new_node("SEMI",NO_TYPE, "") ;return SEMI ;}
 ","   {yylval.type_node = new_node("COMMA", NO_TYPE, ""); return COMMA ;}
 "="   {yylval.type_node = new_node("ASSIGNOP", NO_TYPE, "");  return ASSIGNOP ;}
-">"|"<"|">="|"<="|"=="|"!="  {yylval.type_node = new_node("RELOP", NO_TYPE, yytext);  return RELOP ;}
+">"|"<"|">="|"<="|"=="|"!="  {yylval.type_node = new_node("RELOP", TYPE_STR, yytext);  return RELOP ;}
 "+" {yylval.type_node = new_node("PLUS", NO_TYPE, ""); return PLUS ;}
 "-" {yylval.type_node = new_node("MINUS", NO_TYPE, ""); return MINUS ;}
 "*" {yylval.type_node = new_node("STAR", NO_TYPE, ""); return STAR ;};
