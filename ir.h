@@ -59,7 +59,7 @@ InterCodes ir_list;
 //输出
 void print_operand(Operand op);
 void print_reltype(rel_type type);
-void print_ir(InterCodes ir);
+void print_ir(InterCodes ir, char* filename);
 
 Operand new_variable(int id);
 Operand new_temp();

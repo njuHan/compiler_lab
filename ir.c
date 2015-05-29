@@ -7,11 +7,15 @@ char* current_function;
 
 void print_operand(Operand op)
 {
+	
 	if (op!=NULL)
 	{
+		
+		
 		//typedef enum { VARIABLE, TEMP, CONSTANT, REFERENCE, ADDRESS, OPLABEL, OPFUNC, OPPARAM } op_type;
 		switch(op->kind)
 		{
+			
 		case VARIABLE:
 			fprintf(fp, "v%d", op->u.var_no);
 		break;
@@ -47,6 +51,7 @@ void print_operand(Operand op)
 		}
 			
 	}
+	
 	return ;
 }
 
@@ -79,10 +84,11 @@ void print_reltype(rel_type type)
 	break;
 	}
 }
-void print_ir(InterCodes ir)
+void print_ir(InterCodes ir, char* filename)
 {
+	
 	InterCodes temp = ir;
-	fp = fopen("out1.ir", "w");
+	fp = fopen(filename, "w");
 	while (temp != NULL)
 	{
 		//ASSIGN, ADD, SUB, MUL, DIV, RETURN, GOTO, CALL, DEC
@@ -193,6 +199,7 @@ void print_ir(InterCodes ir)
 		case IRLABEL:
 			fprintf(fp, "LABEL ");
 			print_operand(temp->code->u.uniop.op);
+			
 			fprintf(fp, " :\n");
 		break;
 		
@@ -509,7 +516,6 @@ InterCodes translate_exp(Node* node, Operand place)
 		InterCodes code2 = handler_uniop(label1, IRLABEL);
 		InterCodes code3 = handler_assign(place, c1, ASSIGN);
 		InterCodes code4 = handler_uniop(label2, IRLABEL);
-		
 		return link_code(link_code(link_code(link_code(code0,code1),code2),code3),code4);
 		
 	}
@@ -676,10 +682,11 @@ InterCodes translate_stmt(Node* node)
 			label1 = new_label();
 			label2 = new_label();
 			code1 = translate_cond(child->sibling->sibling, label1, label2);
-			code2 = handler_uniop(label1, IRLABEL);
-			code3 = translate_stmt(child->sibling->sibling->sibling->sibling);
+			code2 = translate_stmt(child->sibling->sibling->sibling->sibling);
+			code3 = handler_uniop(label1, IRLABEL);
+			
 			code4 = handler_uniop(label2, IRLABEL);
-			return link_code(link_code(link_code(code1,code2),code3),code4);
+			return link_code(link_code(link_code(code1,code3),code2),code4);
 			
 		}
 		//IF LP EXP RP STMT ELSE STMT
@@ -701,12 +708,13 @@ InterCodes translate_stmt(Node* node)
 			code3 = translate_stmt(exp_temp->sibling->sibling->sibling->sibling);
 			
 			code4 = handler_uniop(label1, IRLABEL);
-			code5 = handler_uniop(label3, GOTO);
-			code6 = handler_uniop(label2, IRLABEL);
-			code7 = handler_uniop(label3, IRLABEL);
 			
-			//1,4,2,5,6,3,7
-			return link_code(link_code(link_code(link_code(link_code(link_code(code1,code4),code2),code5),code6),code3),code7);
+			code5 = handler_uniop(label2, IRLABEL);
+			code6 = handler_uniop(label3, IRLABEL);
+			code7 = handler_uniop(label3, GOTO);
+			
+			//1,4,2,7,5,3,6
+			return link_code(link_code(link_code(link_code(link_code(link_code(code1,code4),code2),code7),code5),code3),code6);
 		
 		}
 		else
@@ -718,6 +726,9 @@ InterCodes translate_stmt(Node* node)
 	else if (strcmp(child->value.name, "WHILE")==0)
 	{
 		Operand label1, label2, label3;
+		label1 = new_label();
+		label2 = new_label();
+		label3 = new_label();
 		InterCodes code1, code2, code3, code4, code5, code6;
 		Node* exp_node = child->sibling->sibling;
 		assert(strcmp(exp_node->value.name, "Exp")==0);
@@ -725,10 +736,11 @@ InterCodes translate_stmt(Node* node)
 		code2 = translate_stmt(exp_node->sibling->sibling);
 		code3 = handler_uniop(label1, IRLABEL);
 		code4 = handler_uniop(label2, IRLABEL);
-		code5 = handler_uniop(label1, GOTO);
-		code6 = handler_uniop(label3, IRLABEL);
-		//3,1,4,2,5,6
-		return link_code(link_code(link_code(link_code(link_code(code3,code1),code4),code2),code5),code6);
+		code5 = handler_uniop(label3, IRLABEL);
+		code6 = handler_uniop(label1, GOTO);
+		
+		//3,1,4,2,6,5
+		return link_code(link_code(link_code(link_code(link_code(code3,code1),code4),code2),code6),code5);
 		
 	}
 	else	
@@ -777,6 +789,7 @@ InterCodes translate_cond(Node* node, Operand label_true, Operand label_false)
 		code1 = translate_cond(child, label1, label_false);
 		code2 = translate_cond(child->sibling->sibling, label_true, label_false);
 		code3 = handler_uniop(label1, IRLABEL);
+		
 		return link_code(link_code(code1,code3),code2);
 	}
 	//EXP1 OR EXP2
@@ -787,6 +800,7 @@ InterCodes translate_cond(Node* node, Operand label_true, Operand label_false)
 		code1 = translate_cond(child, label_true, label1);
 		code2 = translate_cond(child->sibling->sibling, label_true, label_false);
 		code3 = handler_uniop(label1, IRLABEL);
+		
 		return link_code(link_code(code1,code3),code2);
 	}
 	//other cases
@@ -1274,15 +1288,16 @@ InterCodes translate_array(Node* node, Operand place, Type *list)
 }
 
 
-
+//int count = 0;
 void gen_ir(Node* node)
 {
 	InterCodes code;
-	//printf("%s\n",node->value.name);	
+	
 	if (strcmp(node->value.name, "ExtDef")==0)
 	{
-		
+//		printf("count%d %s\n",count,node->value.name);	
 		code = translate_extdef(node);
+		
 		ir_list = link_code(ir_list, code);
 		return ;
 	}
