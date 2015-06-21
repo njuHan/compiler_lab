@@ -95,4 +95,11 @@ InterCodes translate_array(Node* node, Operand place, Type *list);
 void gen_ir(Node* node);
 void ir_scan(Node* node);
 
+
+//mips.h
+
+void load_mem(char* file);
+
+
+
 #endif

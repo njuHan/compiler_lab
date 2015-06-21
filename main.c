@@ -3,6 +3,9 @@
 #include "tree.h"
 #include "semantic.h"
 #include "ir.h"
+
+extern int temp_count;
+extern int var_count;
 int main(int argc, char** argv)
 {
 	table_init();
@@ -11,7 +14,8 @@ int main(int argc, char** argv)
 	
 	if(argc!=3)
 	{
-		printf("argv error! usage: ./parser test1.c test1output.ir\n");
+		//printf("argv error! usage: ./parser test1.c test1output.ir\n");
+		printf("argv error! usage: ./parser test1.c test1output.s\n");
 		exit(0);
 	}
 	
@@ -33,7 +37,12 @@ int main(int argc, char** argv)
 	InterCodes temp = ir_list;
 
 	
-	print_ir(ir_list, argv[2]);
+	//print_ir(ir_list, argv[2]);
+	print_ir(ir_list, "out.temp");
+	
+	
+	load_mem(argv[2]);
+	
 	//printf("\n------struct-----\n");
 	//print_rbtree(global_struct_table);
 	

@@ -2,7 +2,12 @@
 #include <assert.h>
 
 int label_no = 1;
+
+
 int temp_no = 1;
+int var_count = 0;
+int temp_count = 0;
+
 char* current_function;
 
 void print_operand(Operand op)
@@ -18,10 +23,14 @@ void print_operand(Operand op)
 			
 		case VARIABLE:
 			fprintf(fp, "v%d", op->u.var_no);
+			if (var_count<op->u.var_no)
+				var_count = op->u.var_no;
 		break;
 		
 		case TEMP:
 			fprintf(fp, "t%d", op->u.temp_no);
+			if (temp_count<op->u.temp_no)
+				temp_count = op->u.temp_no;
 		break;
 		
 		case CONSTANT:
@@ -30,10 +39,14 @@ void print_operand(Operand op)
 		
 		case REFERENCE:
 			fprintf(fp, "&v%d", op->u.var_no);
+			if (var_count<op->u.var_no)
+				var_count = op->u.var_no;
 		break;
 		
 		case ADDRESS:	
 			fprintf(fp, "*t%d", op->u.temp_no);
+			if (temp_count<op->u.temp_no)
+				temp_count = op->u.temp_no;
 		break;
 		
 		case OPLABEL:
@@ -86,6 +99,7 @@ void print_reltype(rel_type type)
 }
 void print_ir(InterCodes ir, char* filename)
 {
+	
 	
 	InterCodes temp = ir;
 	fp = fopen(filename, "w");
@@ -220,11 +234,14 @@ void print_ir(InterCodes ir, char* filename)
 		}
 		temp = temp->next;
 	}
+	fclose(fp);
 }
 
 
 Operand new_variable(int id)
 {
+	//if (id>var_count)
+	//	var_count = id;
 	Operand op = (Operand)malloc(sizeof(struct Operand_));
 	op->kind = VARIABLE;
 	op->flag = 0;
